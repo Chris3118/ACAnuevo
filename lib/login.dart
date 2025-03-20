@@ -1,7 +1,11 @@
 import 'package:acanuevo/inicio.dart';
 import 'package:acanuevo/mapa.dart';
 import 'package:acanuevo/perfil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InicioSesion extends StatefulWidget {
   @override
@@ -9,7 +13,67 @@ class InicioSesion extends StatefulWidget {
 }
 
 class _InicioSesionState extends State<InicioSesion> {
-  Future<void> _iniciar() async {}
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  Future<User?> iniciarConGoogle() async {
+    try {
+      final GoogleSignInAccount? usuarioGoogle = await _googleSignIn.signIn();
+
+      if (usuarioGoogle == null) {
+        return null;
+      }
+
+      final GoogleSignInAuthentication googleAutenticacion =
+          await usuarioGoogle.authentication;
+
+      final credenciales = GoogleAuthProvider.credential(
+        accessToken: googleAutenticacion.accessToken,
+        idToken: googleAutenticacion.idToken,
+      );
+
+      final UserCredential usuario =
+          await _auth.signInWithCredential(credenciales);
+
+      return usuario.user;
+    } catch (e) {
+      print("El error es este: $e");
+    }
+  }
+
+  Future<void> _iniciar() async {
+    try {
+      //Iniciar un dialogo de carga
+      EasyLoading.show(
+        status: 'Iniciando...',
+        maskType: EasyLoadingMaskType.black,
+      );
+
+      final usuario = await iniciarConGoogle();
+
+      if (usuario == null) {
+        EasyLoading.showError("Error al iniciar");
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString('nombre', usuario!.displayName ?? 'SinNombre');
+      await prefs.setString('correo', usuario.email ?? 'SinCorreo');
+      await prefs.setString('foto', usuario.photoURL ?? 'SinFoto');
+      await prefs.setString('id', usuario.uid);
+
+
+      
+    } catch (e) {
+      //Si hay un error, mostrar un dialogo de error
+      EasyLoading.showError('Error al iniciar sesión');
+      print("El error es este: $e");
+    } finally {
+      //Cerrar el dialogo de carga
+      EasyLoading.dismiss();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +130,7 @@ class _InicioSesionState extends State<InicioSesion> {
                                 ),
                               ),
                               onPressed: () async {
-                                await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => Inicio()));
+                                _iniciar();
                               },
                               child: const Text(
                                 "Iniciar",

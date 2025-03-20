@@ -1,8 +1,11 @@
 import 'package:acanuevo/login.dart';
 import 'package:acanuevo/pantallaCarga.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const MyApp());
 }
 
@@ -24,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => PantallaCarga(),
         '/login': (context) => InicioSesion(),
       },
+      builder: EasyLoading.init(),
     );
   }
 }
